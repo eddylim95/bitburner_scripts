@@ -1,0 +1,3 @@
+[submodule "BitBurner-Scripts"]
+	path = BitBurner-Scripts
+	url = https://github.com/waelectriz/BitBurner-Scripts.git
