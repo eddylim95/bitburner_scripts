@@ -1,3 +1,6 @@
 [submodule "BitBurner-Scripts"]
 	path = BitBurner-Scripts
 	url = https://github.com/waelectriz/BitBurner-Scripts.git
+[submodule "bitburner"]
+	path = bitburner
+	url = https://github.com/danielyxie/bitburner.git

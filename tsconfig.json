@@ -5,6 +5,7 @@
       "sourceMap": true
     },
     "exclude": [
-      "BitBurner-Scripts"
+      "BitBurner-Scripts",
+      "bitburner"
     ]
 }
