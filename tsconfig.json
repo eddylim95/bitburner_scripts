@@ -2,10 +2,11 @@
     "compilerOptions": {
       "target": "es6",
       "module": "es6",
-      "sourceMap": true
+      "sourceMap": false
     },
     "exclude": [
       "BitBurner-Scripts",
-      "bitburner"
+      "bitburner",
+      "NetscriptDefinitions.d.ts"
     ]
 }
