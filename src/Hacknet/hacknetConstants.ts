@@ -4,7 +4,7 @@ export const HacknetNodeConstants: {
     MoneyGainPerLevel: 1.5
 };
 
-export enum HacknetNodeComponentNames {
+export enum HacknetNodeComponentName {
     level,
     ram,
     core,

@@ -1,4 +1,4 @@
-import { HacknetNodeConstants, HacknetNodeComponentNames } from "src/Hacknet/hacknetConstants";
+import { HacknetNodeConstants, HacknetNodeComponentName } from "src/Hacknet/hacknetConstants";
 
 export class HacknetNode {
     ns;
@@ -13,8 +13,8 @@ export class HacknetNode {
     timeOnline: number;
     totalProduction: number;
     maxMoneyRateComponent: {
-        name: HacknetNodeComponentNames;
-        moneyRate: number;
+        name: HacknetNodeComponentName;
+        costNormalizedMoneyRate: number;
         cost: number;
     };
 
@@ -31,49 +31,46 @@ export class HacknetNode {
         this.production = nodeStats.production;
         this.timeOnline = nodeStats.timeOnline;
         this.totalProduction = nodeStats.totalProduction;
-        this.maxMoneyRateComponent = this.getmaxMoneyRateComponent();
+        this.maxMoneyRateComponent = this.getMaxCostNormalizedMoneyRateComponent();
     }
 
     upgradeAndUpdateMaxMoneyRateComponent() {
         // upgrade maxMoneyRateComponent
-        if (this.maxMoneyRateComponent.name == HacknetNodeComponentNames.level) { this.ns.upgradeLevel(this.nodeIndex, 1); ++this.level; }
-        else if (this.maxMoneyRateComponent.name == HacknetNodeComponentNames.ram) { this.ns.upgradeRam(this.nodeIndex, 1); ++this.ram; }
-        else if (this.maxMoneyRateComponent.name == HacknetNodeComponentNames.core) { this.ns.upgradeCore(this.nodeIndex, 1); ++this.cores; }
+        if (this.maxMoneyRateComponent.name == HacknetNodeComponentName.level) { this.ns.upgradeLevel(this.nodeIndex, 1); ++this.level; }
+        else if (this.maxMoneyRateComponent.name == HacknetNodeComponentName.ram) { this.ns.upgradeRam(this.nodeIndex, 1); ++this.ram; }
+        else if (this.maxMoneyRateComponent.name == HacknetNodeComponentName.core) { this.ns.upgradeCore(this.nodeIndex, 1); ++this.cores; }
 
         // update maxMoneyRateComponent
-        this.getmaxMoneyRateComponent()
+        this.getMaxCostNormalizedMoneyRateComponent()
     }
 
-    private getmaxMoneyRateComponent() {
+    private getMaxCostNormalizedMoneyRateComponent() {
         // const levelMult = level * gainPerLevel;
         // const ramMult = Math.pow(1.035, ram - 1);
         // const coresMult = (cores + 5) / 6;
         // let moneyGainRate = levelMult * ramMult * coresMult * mult * BitNodeMultipliers.HacknetNodeMoney;
-        let levelProduction = this.level * HacknetNodeConstants.MoneyGainPerLevel;
-        let ramProduction = Math.pow(1.035, this.ram - 1);
-        let coreProduction = (this.cores + 5) / 6;
-
         let levelUpgradeCost = this.ns.getLevelUpgradeCost(this.nodeIndex, 1);
         let ramUpgradeCost = this.ns.getRamUpgradeCost(this.nodeIndex, 1);
         let coreUpgradeCost = this.ns.getCoreUpgradeCost(this.nodeIndex, 1);
         
-        let levelUpgradeMoneyRate = (this.level + 1) * HacknetNodeConstants.MoneyGainPerLevel * ramProduction * coreProduction / levelUpgradeCost;
-        let ramUpgradeMoneyRate = levelProduction * (Math.pow(1.035, this.ram + 1 - 1)) * coreProduction / ramUpgradeCost;
-        let coreUpgradeMoneyRate = levelProduction * ramProduction * ((this.cores + 1 + 5) / 6) / coreUpgradeCost;
+        let levelCostNormalizedUpgradeMoneyRate = (this.production / (this.level) * (this.level + 1) - this.production) / levelUpgradeCost;
+        let ramCostNormalizedUpgradeMoneyRate = (this.production / (Math.pow(1.035, this.ram- 1) * Math.pow(1.035, this.ram + 1 - 1)) - this.production) / ramUpgradeCost;
+        let coreCostNormalizedUpgradeMoneyRate = (this.production / ((this.cores + 5) / 6) * ((this.cores + 1 + 5) / 6) - this.production) / coreUpgradeCost;
 
         const upgrades = [
-            {name: HacknetNodeComponentNames.level, moneyRate: levelUpgradeMoneyRate, cost: levelUpgradeCost},
-            {name: HacknetNodeComponentNames.ram, moneyRate: ramUpgradeMoneyRate, cost: ramUpgradeCost},
-            {name: HacknetNodeComponentNames.core, moneyRate: coreUpgradeMoneyRate, cost: coreUpgradeCost},
+            {name: HacknetNodeComponentName.level, costNormalizedMoneyRate: levelCostNormalizedUpgradeMoneyRate, cost: levelUpgradeCost},
+            {name: HacknetNodeComponentName.ram, costNormalizedMoneyRate: ramCostNormalizedUpgradeMoneyRate, cost: ramUpgradeCost},
+            {name: HacknetNodeComponentName.core, costNormalizedMoneyRate: coreCostNormalizedUpgradeMoneyRate, cost: coreUpgradeCost},
         ];
-        let maxMoneyRateComponent = upgrades.reduce(
-            (previousValue, currentValue) => (previousValue.moneyRate < currentValue.moneyRate ? currentValue : previousValue),
+        let maxCostNormalizedMoneyRateComponent = upgrades.reduce(
+            (previousValue, currentValue) => (previousValue.costNormalizedMoneyRate < currentValue.costNormalizedMoneyRate ? currentValue : previousValue),
             upgrades[0]
         );
 
-        return maxMoneyRateComponent;
+        return maxCostNormalizedMoneyRateComponent;
     }
 }
+
 
 export class HacknetNodeNetwork {
     ns;
@@ -90,9 +87,13 @@ export class HacknetNodeNetwork {
         this.nodes = this.getNetworkHacknetnodes();
         this.newNodeCost = ns.hacknet.getPurchaseNodeCost();
         this.maxMoneyRateNode = this.getMaxMoneyRateNode();
-        ns.printf(`maxMoneyRateNode = ${this.maxMoneyRateNode.name}`);
+        ns.printf(`maxMoneyRateNode=${this.maxMoneyRateNode.name}, costNormalizedMoneyRate=${this.maxMoneyRateNode.maxMoneyRateComponent.costNormalizedMoneyRate}`);
     }
     
+    calculateUpgradeTime(playerIncome : number) {
+        return Math.ceil(this.maxMoneyRateNode.maxMoneyRateComponent.cost / playerIncome)
+    }
+
     upgradeAndUpdateNodeNetwork() {
         if (this.maxMoneyRateNode.maxMoneyRateComponent.cost > this.ns.newNodeCost && this.numNodes < this.maxNumNodes) { this.ns.purchaseNode(); ++this.numNodes; }
         else { this.maxMoneyRateNode.upgradeAndUpdateMaxMoneyRateComponent(); }
@@ -106,10 +107,9 @@ export class HacknetNodeNetwork {
         return networkHacknetnodes;
     }
 
-    // TODO: Add opportunity cost by time with rate
     private getMaxMoneyRateNode() : HacknetNode {
         let maxMoneyRateNode = this.nodes.reduce(
-            (previousValue, currentValue) => (previousValue.maxMoneyRateComponent.moneyRate < currentValue.maxMoneyRateComponent.moneyRate ? currentValue : previousValue),
+            (previousValue, currentValue) => (previousValue.maxMoneyRateComponent.costNormalizedMoneyRate < currentValue.maxMoneyRateComponent.costNormalizedMoneyRate ? currentValue : previousValue),
             this.nodes[0]
         );
 

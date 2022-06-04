@@ -1,7 +1,9 @@
+import { HacknetNodeNetwork } from "../Hacknet/hacknetObjects";
+
 function growHacknetNode(ns): void {
 	let playerMoney: number = ns.getServerMoneyAvailable("home");
-	
-	let node1 : HacknetNode = ns.hacknet.getHacknetNode(0);
+	let hacknetNetwork = new HacknetNodeNetwork(ns);
+	// let node1 : HacknetNode = ns.hacknet.getHacknetNode(0);
 	// let hacknetLevelCost = ns.hacknet.getLevelUpgradeCost(i, 10);
 	// let hacknet.getHacknetNode(i).level
 }
