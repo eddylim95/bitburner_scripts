@@ -5,8 +5,4 @@
 // 	}
 // }
 function main(ns) {
-    const { production, purchaseCost } = ns.getHacknetMultipliers();
-    print(production);
-    print(purchaseCost);
 }
-//# sourceMappingURL=testts.js.map
