@@ -1,4 +1,4 @@
-import { HacknetNodeConstants, HacknetNodeComponentName } from "Hacknet/hacknetConstants";
+import { HacknetNodeConstants, HacknetNodeComponentName, NetworkNextUpgradeAction } from "Hacknet/hacknetConstants";
 
 export class HacknetNode {
     ns;
@@ -15,6 +15,7 @@ export class HacknetNode {
     maxMoneyRateComponent: {
         name: HacknetNodeComponentName;
         costNormalizedMoneyRate: number;
+        productionGain: number;
         cost: number;
     };
 
@@ -54,14 +55,18 @@ export class HacknetNode {
         let ramUpgradeCost = this.ns.hacknet.getRamUpgradeCost(this.nodeIndex, 1);
         let coreUpgradeCost = this.ns.hacknet.getCoreUpgradeCost(this.nodeIndex, 1);
         
-        let levelCostNormalizedUpgradeMoneyRate = (this.production / (this.level) * (this.level + 1) - this.production) / levelUpgradeCost;
-        let ramCostNormalizedUpgradeMoneyRate = (this.production / (Math.pow(1.035, this.ram- 1) * Math.pow(1.035, this.ram + 1 - 1)) - this.production) / ramUpgradeCost;
-        let coreCostNormalizedUpgradeMoneyRate = (this.production / ((this.cores + 5) / 6) * ((this.cores + 1 + 5) / 6) - this.production) / coreUpgradeCost;
+        let levelUpgradeProductionGain = this.production / (this.level) * (this.level + 1) - this.production;
+        let ramUpgradeProductionGain = this.production / (Math.pow(1.035, this.ram- 1) * Math.pow(1.035, this.ram + 1 - 1)) - this.production;
+        let coreUpgradeProductionGain = this.production / ((this.cores + 5) / 6) * ((this.cores + 1 + 5) / 6) - this.production;
+
+        let levelCostNormalizedUpgradeMoneyRate = levelUpgradeProductionGain / levelUpgradeCost;
+        let ramCostNormalizedUpgradeMoneyRate = ramUpgradeProductionGain / ramUpgradeCost;
+        let coreCostNormalizedUpgradeMoneyRate = coreUpgradeProductionGain / coreUpgradeCost;
 
         const upgrades = [
-            {name: HacknetNodeComponentName.level, costNormalizedMoneyRate: levelCostNormalizedUpgradeMoneyRate, cost: levelUpgradeCost},
-            {name: HacknetNodeComponentName.ram, costNormalizedMoneyRate: ramCostNormalizedUpgradeMoneyRate, cost: ramUpgradeCost},
-            {name: HacknetNodeComponentName.core, costNormalizedMoneyRate: coreCostNormalizedUpgradeMoneyRate, cost: coreUpgradeCost},
+            {name: HacknetNodeComponentName.level, costNormalizedMoneyRate: levelCostNormalizedUpgradeMoneyRate, productionGain: levelUpgradeProductionGain, cost: levelUpgradeCost},
+            {name: HacknetNodeComponentName.ram, costNormalizedMoneyRate: ramCostNormalizedUpgradeMoneyRate, productionGain: ramUpgradeProductionGain, cost: ramUpgradeCost},
+            {name: HacknetNodeComponentName.core, costNormalizedMoneyRate: coreCostNormalizedUpgradeMoneyRate, productionGain: coreUpgradeProductionGain, cost: coreUpgradeCost},
         ];
         let maxCostNormalizedMoneyRateComponent = upgrades.reduce(
             (previousValue, currentValue) => (previousValue.costNormalizedMoneyRate < currentValue.costNormalizedMoneyRate ? currentValue : previousValue),
@@ -75,35 +80,52 @@ export class HacknetNode {
 
 export class HacknetNodeNetwork {
     ns;
-    maxNumNodes: number;
     numNodes: number;
     nodes: Array<HacknetNode>;
     networkIncome: number;
     newNodeCost: number;
     maxMoneyRateNode: HacknetNode;
+    networkNextUpgrade: {
+        action: NetworkNextUpgradeAction;
+        incomeGain: number;
+        upgradeCost: number;
+    };
 
     constructor(ns) {
         this.ns = ns;
-        this.maxNumNodes = ns.hacknet.maxNumNodes();
         this.numNodes = ns.hacknet.numNodes();
         this.nodes = this.getNetworkHacknetnodes();
-        this.newNodeCost = ns.hacknet.getPurchaseNodeCost();
         this.maxMoneyRateNode = this.getMaxMoneyRateNode();
         this.networkIncome = this.calculateIncome();
         ns.printf(`maxMoneyRateNode=${this.maxMoneyRateNode.name}, costNormalizedMoneyRate=${this.maxMoneyRateNode.maxMoneyRateComponent.costNormalizedMoneyRate}`);
-    }
-    
-    calculateUpgradeTime(playerIncome = this.networkIncome): number {
-        return Math.ceil(this.maxMoneyRateNode.maxMoneyRateComponent.cost / playerIncome)
+        this.networkNextUpgrade = this.getNetworkNextUpgrade();
     }
     
     upgradeAndUpdateNodeNetwork() : void {
-        if (this.maxMoneyRateNode.maxMoneyRateComponent.cost > this.ns.newNodeCost && this.numNodes < this.maxNumNodes) { 
-            this.purchaseNodeAndUpdateNetwork()
-        }
-        else { 
+        // Prefer to buy new nodes
+        if (this.networkNextUpgrade.action == NetworkNextUpgradeAction.addNode) {
+            this.purchaseNodeAndUpdateNetwork();
+        } else { 
             this.maxMoneyRateNode.upgradeAndUpdateMaxMoneyRateComponent(); 
-            this.networkIncome = this.calculateIncome(); 
+            this.networkIncome = this.calculateIncome();
+            this.networkNextUpgrade = this.getNetworkNextUpgrade();
+        }
+    }
+
+    private getNetworkNextUpgrade() {
+        let newNodeCost = this.ns.hacknet.getPurchaseNodeCost()
+        if (this.maxMoneyRateNode.maxMoneyRateComponent.cost > newNodeCost && this.numNodes < this.ns.hacknet.maxNumNodes()) { 
+            return {
+                action : NetworkNextUpgradeAction.addNode,
+                incomeGain : HacknetNodeConstants.MoneyGainPerLevel * 1,
+                upgradeCost: newNodeCost,
+            }
+        } else { 
+            return {
+                action : NetworkNextUpgradeAction.upgradeNode,
+                incomeGain : this.maxMoneyRateNode.maxMoneyRateComponent.productionGain,
+                upgradeCost: this.maxMoneyRateNode.maxMoneyRateComponent.cost,
+            }
         }
     }
 
@@ -113,6 +135,7 @@ export class HacknetNodeNetwork {
         this.nodes.push(newNode);
         ++this.numNodes; 
         this.networkIncome += newNode.production;
+        this.networkNextUpgrade = this.getNetworkNextUpgrade();
         this.ns.printf(`Purchased new node: ${newNode.name}`)
     }
 
