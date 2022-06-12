@@ -9,3 +9,8 @@ export enum HacknetNodeComponentName {
     ram,
     core,
 }
+
+export enum NetworkNextUpgradeAction {
+    addNode,
+    upgradeNode
+}
