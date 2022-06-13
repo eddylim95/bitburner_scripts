@@ -1,5 +1,17 @@
 import { HacknetNodeConstants, HacknetNodeComponentName, NetworkNextUpgradeAction } from "Hacknet/hacknetConstants";
 export class HacknetNode {
+    ns;
+    nodeIndex;
+    name;
+    level;
+    ram;
+    cores;
+    // cache: number;
+    // hashCapacity: number;
+    production;
+    timeOnline;
+    totalProduction;
+    maxMoneyRateComponent;
     constructor(ns, nodeIndex) {
         let nodeStats = ns.hacknet.getNodeStats(nodeIndex);
         this.ns = ns;
@@ -57,6 +69,13 @@ export class HacknetNode {
     }
 }
 export class HacknetNodeNetwork {
+    ns;
+    numNodes;
+    nodes;
+    networkIncome;
+    newNodeCost;
+    maxMoneyRateNode;
+    networkNextUpgrade;
     constructor(ns) {
         this.ns = ns;
         this.numNodes = ns.hacknet.numNodes();

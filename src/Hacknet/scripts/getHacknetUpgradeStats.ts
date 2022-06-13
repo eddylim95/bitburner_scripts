@@ -1,9 +1,14 @@
 import { HacknetNodeNetwork } from "Hacknet/hacknetObjects";
+import { incomeSourceStats, dbIncomeSourceStats } from "sharedObjects/incomeDbObjects";
 
-export function main(ns) {
+export async function main(ns): Promise<void> {
 	let hacknetNodeNetwork = new HacknetNodeNetwork(ns);
-	return {
+	let data = new incomeSourceStats({
+		incomeSource: "hacknet",
 		incomeGain: hacknetNodeNetwork.networkNextUpgrade.incomeGain,
-        upgradeCost: hacknetNodeNetwork.networkNextUpgrade.upgradeCost,
-	}
+		upgradeCost: hacknetNodeNetwork.networkNextUpgrade.upgradeCost,
+		modifyTime: Date.now(),
+	})
+	let dbIncomeSourceStat = new dbIncomeSourceStats(ns);
+	await dbIncomeSourceStat.storeIncomeStats(ns, [data]);
 }

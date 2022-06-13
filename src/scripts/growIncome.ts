@@ -4,10 +4,15 @@ export async function main(ns) {
         serverName="home";
     }
     // let scriptName = "/Hacknet/scripts/getHacknetUpgradeStats.js"
-    let scriptName = "/Hacknet/scripts/growHacknetNodes.js"
     // let scriptName = ns.args[1]
     ns.tprint(`ram: ${ns.getScriptRam("/scripts/growIncome.js")}, executing growIncome`)
-	let pid = await execScript(ns, scriptName, serverName);
+    
+    let getHacknetUpgradeStats = "/Hacknet/scripts/getHacknetUpgradeStats.js"
+    let getHacknetUpgradeStatsPid = await execScript(ns, getHacknetUpgradeStats, serverName);
+
+    // let growHacknetNodesScript = "/Hacknet/scripts/growHacknetNodes.js"
+	// let growHacknetNodesPid = await execScript(ns, growHacknetNodesScript, serverName);
+    
     // this.ns.printf(`Hacknet Upgrade Income: ${hacknetUpgradeStats.incomeGain}, Upgrade Cost: ${hacknetUpgradeStats.upgradeCost}`);
 }
 
